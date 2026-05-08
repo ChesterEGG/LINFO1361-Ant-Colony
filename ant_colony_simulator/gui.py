@@ -485,18 +485,19 @@ def main():
     parser.add_argument(
         "--ants",
         type=int,
-        default=10,
+        default=50,
         help="Number of ants (default: 10) - overridden by ANTS section in environment file if present",
     )
     parser.add_argument(
         "--strategy",
         type=str,
-        default="non_cooperative",
+        #default="non_cooperative",
         help="Ant strategy (non_cooperative, cooperative, smart or filename) (default: non_cooperative)",
     )
     parser.add_argument(
         "--strategy-file",
         type=str,
+        default="test_strategies.py",
         help="Python file containing custom ant strategy",
     )
     parser.add_argument(
