@@ -485,7 +485,7 @@ def main():
     parser.add_argument(
         "--ants",
         type=int,
-        default=50,
+        default=20,
         help="Number of ants (default: 10) - overridden by ANTS section in environment file if present",
     )
     parser.add_argument(
