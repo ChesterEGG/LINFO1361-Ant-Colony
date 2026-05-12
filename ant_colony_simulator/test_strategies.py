@@ -24,6 +24,9 @@ class NonCooperativeStrategy(AntStrategy):
         self.walls = {}
         self.target_food = {}
         self.return_path = {}
+        self.frontiers = {}
+        self.target_frontier = {}
+        self.food_location = {}
 
     def init_ant(self, ant_id):
         """Init de la mémoire pour un ant qui n'a pas encore de mémoire"""
@@ -36,6 +39,9 @@ class NonCooperativeStrategy(AntStrategy):
             self.walls[ant_id] = set()
             self.target_food[ant_id] = None
             self.return_path[ant_id] = []
+            self.frontiers[ant_id] = set()
+            self.target_frontier[ant_id] = None
+            self.food_location[ant_id] = set()
 
     def bfs(self, start, destination, walls):
         """Calcule du chemin le plus court en évitant les murs"""
@@ -138,6 +144,11 @@ class NonCooperativeStrategy(AntStrategy):
             if terrain == TerrainType.WALL:
                 self.walls[ant_id].add((x + dx, y + dy))
 
+            elif terrain == TerrainType.FOOD:
+                self.food_location[ant_id].add((x + dx, y + dy))
+            elif terrain == TerrainType.EMPTY or terrain == TerrainType.COLONY:
+                self.food_location[ant_id].discard((x + dx, y + dy))
+
         # Chercher le chemin de retour
         if self.is_carrying_food[ant_id]:
             if self.return_path[ant_id]:
@@ -152,6 +163,11 @@ class NonCooperativeStrategy(AntStrategy):
                 action = self.get_direction((x, y), (destination_x, destination_y), perception.direction)
                 if action == AntAction.MOVE_FORWARD:
                     next_x, next_y = Direction.get_delta(perception.direction)
+                    if (next_x, next_y) not in perception.visible_cells or perception.visible_cells[(next_x, next_y)] == TerrainType.WALL:
+                        self.walls[ant_id].add((x + next_x, y + next_y))
+                        self.return_path[ant_id] = self.bfs((x, y), (0, 0), self.walls[ant_id])
+                        return random.choice([AntAction.TURN_RIGHT, AntAction.TURN_LEFT])
+
                     self.position[ant_id] = (x + next_x, y+next_y)
 
                 return action
@@ -173,48 +189,76 @@ class NonCooperativeStrategy(AntStrategy):
                 for (dx, dy), terrain in perception.visible_cells.items():
                     if terrain == TerrainType.FOOD:
                         self.target_food[ant_id] = (x + dx, y + dy)
+                        self.target_frontier[ant_id] = None
                         break
 
+            # Mise à jour des frontières
+            for (dx, dy) , terrain in perception.visible_cells.items():
+                if terrain == TerrainType.EMPTY or terrain == TerrainType.FOOD:
+                    nx, ny = x + dx, y + dy
+                    if (nx, ny) not in self.visited_cells[ant_id]:
+                        self.frontiers[ant_id].add((nx, ny))
+
+            self.frontiers[ant_id].discard((x, y))
+
+            target = None
             # Si on trouve une cible, on fonce dessus
             if self.target_food[ant_id] is not None:
-                destination_x, destination_y = self.target_food[ant_id]
+                target = self.target_food[ant_id]
+            else:
+                if self.target_frontier[ant_id] == (x, y) or self.target_frontier[ant_id] not in self.frontiers[ant_id]:
+                    self.target_frontier[ant_id] = None
 
-                action = self.get_direction((x, y), (destination_x, destination_y), perception.direction)
+                if self.food_location[ant_id]:
+                    self.target_food[ant_id] = next(iter(self.food_location[ant_id]))
+                    self.target_frontier[ant_id] = None
+                    target = self.target_food[ant_id]
+
+                elif self.target_frontier[ant_id] is None and self.frontiers[ant_id]:
+                    frontiers = list(self.frontiers[ant_id])
+                    sample = random.sample(frontiers, min(20, len(frontiers)))
+                    self.target_frontier[ant_id] = max(sample, key=lambda f: f[0]**2 + f[1]**2)
+                    target = self.target_frontier[ant_id]
+
+            if self.target_food[ant_id] is None:
+                front_dx, front_dy = Direction.get_delta(perception.direction)
+                front_x, front_y = x + front_dx, y + front_dy
+
+                if (front_dx, front_dy) in perception.visible_cells and perception.visible_cells[(front_dx, front_dy)] != TerrainType.WALL:
+                    if (front_x, front_y) not in self.visited_cells[ant_id]:
+                        self.path[ant_id].append(AntAction.MOVE_FORWARD)
+                        self.position[ant_id] = (front_x, front_y)
+                        self.visited_cells[ant_id].add((front_x, front_y))
+                        self.frontiers[ant_id].discard((front_x, front_y))
+                        return AntAction.MOVE_FORWARD
+
+            if target is not None:
+                target_x, target_y = target
+                action = self.get_direction((x, y), (target_x, target_y), perception.direction)
+                if action == AntAction.MOVE_FORWARD:
+                    front_x, front_y = Direction.get_delta(perception.direction)
+                    if (front_x, front_y) not in perception.visible_cells or perception.visible_cells[(front_x, front_y)] == TerrainType.WALL:
+                        if self.target_food[ant_id] is None:
+                            self.target_frontier[ant_id] = None
+                        action = random.choice([AntAction.TURN_RIGHT, AntAction.TURN_LEFT])
+
                 self.path[ant_id].append(action)
                 if action == AntAction.MOVE_FORWARD:
                     next_x, next_y = Direction.get_delta(perception.direction)
                     self.position[ant_id] = (x + next_x, y+next_y)
                     self.visited_cells[ant_id].add(self.position[ant_id])
-
+                    self.frontiers[ant_id].discard(self.position[ant_id])
                 return action
 
-            # Visiter avec priorité les cases pas encore visitées
-            next_x, next_y = Direction.get_delta(perception.direction)
-            front_x = x + next_x
-            front_y = y + next_y
-            actions = [AntAction.TURN_LEFT, AntAction.TURN_RIGHT]
-            can_move_forward = True
 
-            # Vérifier si on peut avancer
-            if (next_x, next_y) not in perception.visible_cells:
-                can_move_forward = False
-            elif perception.visible_cells[(next_x, next_y)] == TerrainType.WALL:
-                can_move_forward = False
-
-            if can_move_forward:
-                if (front_x, front_y) not in self.visited_cells[ant_id]:
-                    # Pas encore visité, on avance mais on garde une chance de tourner pour éviter les boucles infinis
-                    actions = actions = [AntAction.MOVE_FORWARD, AntAction.MOVE_FORWARD, AntAction.MOVE_FORWARD, AntAction.MOVE_FORWARD, AntAction.TURN_LEFT, AntAction.TURN_RIGHT]
+            # Sécurité (map exploré à 100% et pas de nourriture trouvé)
+            action = random.choice([AntAction.TURN_RIGHT, AntAction.TURN_LEFT, AntAction.MOVE_FORWARD])
+            if action == AntAction.MOVE_FORWARD:
+                front_x ,front_y = Direction.get_delta(perception.direction)
+                if (front_x, front_y) not in perception.visible_cells or perception.visible_cells[(front_x, front_y)] == TerrainType.WALL:
+                    action = AntAction.TURN_LEFT
                 else:
-                    # Déja visité, on garde toutes les actions pour éviter d'être bloqué
-                    actions = [AntAction.MOVE_FORWARD, AntAction.TURN_LEFT, AntAction.TURN_RIGHT]
-
-        random_action = random.choice(actions)
-        self.path[ant_id].append(random_action)
-        if random_action == AntAction.MOVE_FORWARD:
-            self.position[ant_id] = (front_x, front_y)
-            self.visited_cells[ant_id].add(self.position[ant_id])
-
-        return random_action
+                    self.position[ant_id] = (x + front_x, y + front_y)
+            return action
 
 

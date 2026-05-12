@@ -149,7 +149,7 @@ def main():
     parser.add_argument(
         "--env",
         type=str,
-        default="simple",
+        default="obstacle",
         help="Environment type (simple, obstacle, maze) or path to environment file (e.g., simple_env.txt)",
     )
     parser.add_argument(
@@ -174,12 +174,13 @@ def main():
     parser.add_argument(
         "--strategy",
         type=str,
-        default="non_cooperative",
+        #default="non_cooperative",
         help="Ant strategy to use (non_cooperative, cooperative, smart) (default: non_cooperative)",
     )
     parser.add_argument(
         "--strategy-file",
         type=str,
+        default="test_strategies.py",
         help="Path to Python file containing custom ant strategy",
     )
 
