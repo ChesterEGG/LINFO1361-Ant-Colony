@@ -17,8 +17,6 @@ class NonCooperativeStrategy(AntStrategy):
 
         # Mémoire pour chaque fourmi {ant_id: value}
         self.is_carrying_food = {}
-        self.path = {}
-        self.reverse = {}
         self.position = {}
         self.visited_cells = {}
         self.walls = {}
@@ -30,10 +28,8 @@ class NonCooperativeStrategy(AntStrategy):
 
     def init_ant(self, ant_id):
         """Init de la mémoire pour un ant qui n'a pas encore de mémoire"""
-        if ant_id not in self.path:
+        if ant_id not in self.position:
             self.is_carrying_food[ant_id] = False
-            self.path[ant_id] = []
-            self.reverse[ant_id] = 0
             self.position[ant_id] = (0,0)
             self.visited_cells[ant_id] = {(0, 0)}
             self.walls[ant_id] = set()
@@ -102,18 +98,12 @@ class NonCooperativeStrategy(AntStrategy):
         ant_id = perception.ant_id
         self.init_ant(ant_id)
 
-        # Effectue un demi-tour
-        if self.reverse[ant_id] > 0:
-            self.reverse[ant_id] -= 1
-            return AntAction.TURN_LEFT
-
 
         # Si on a la nourriture et que on est sur la colonie
         if self.is_carrying_food[ant_id]:
             cells = perception.visible_cells
             if (0, 0) in cells and cells[(0, 0)] == TerrainType.COLONY:
                 self.is_carrying_food[ant_id] = False
-                self.path[ant_id].clear()
                 return AntAction.DROP_FOOD
 
         # Si on cherche la nourriture et que on est sur la nourriture
@@ -121,7 +111,6 @@ class NonCooperativeStrategy(AntStrategy):
             cells = perception.visible_cells
             if (0, 0) in cells and cells[(0, 0)] == TerrainType.FOOD:
                 self.is_carrying_food[ant_id] = True
-                self.reverse[ant_id] = 4
                 self.target_food[ant_id] = None
 
                 current_position = self.position[ant_id]
@@ -226,7 +215,6 @@ class NonCooperativeStrategy(AntStrategy):
 
                 if (front_dx, front_dy) in perception.visible_cells and perception.visible_cells[(front_dx, front_dy)] != TerrainType.WALL:
                     if (front_x, front_y) not in self.visited_cells[ant_id]:
-                        self.path[ant_id].append(AntAction.MOVE_FORWARD)
                         self.position[ant_id] = (front_x, front_y)
                         self.visited_cells[ant_id].add((front_x, front_y))
                         self.frontiers[ant_id].discard((front_x, front_y))
@@ -242,7 +230,6 @@ class NonCooperativeStrategy(AntStrategy):
                             self.target_frontier[ant_id] = None
                         action = random.choice([AntAction.TURN_RIGHT, AntAction.TURN_LEFT])
 
-                self.path[ant_id].append(action)
                 if action == AntAction.MOVE_FORWARD:
                     next_x, next_y = Direction.get_delta(perception.direction)
                     self.position[ant_id] = (x + next_x, y+next_y)
