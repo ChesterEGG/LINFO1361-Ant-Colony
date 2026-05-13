@@ -497,7 +497,7 @@ def main():
     parser.add_argument(
         "--strategy-file",
         type=str,
-        default="test_strategies.py",
+        default="strategies/cheater.py",
         help="Python file containing custom ant strategy",
     )
     parser.add_argument(
