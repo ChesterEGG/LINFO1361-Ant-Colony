@@ -54,6 +54,7 @@ class CooperativeStrategy(AntStrategy):
         ant_id = perception.ant_id
         target_x, target_y = None, None
 
+        # Vision directe
         for (x, y),  terrain in perception.visible_cells.items():
             if x == 0 and y == 0:
                 continue
@@ -64,6 +65,7 @@ class CooperativeStrategy(AntStrategy):
                 target_x, target_y = x, y
                 break
 
+        # Phéromones
         if target_x is None and target_y is None:
             if self.is_carrying_food[ant_id]:
                 pheromone = perception.home_pheromone
@@ -80,6 +82,8 @@ class CooperativeStrategy(AntStrategy):
                             max_smell = smell
                             target_x, target_y = x, y
 
+
+        # Avancer vers la cible ou l'odeur
         if target_x is not None and target_y is not None:
             best_direction = None
             max_dot = -float('inf')
