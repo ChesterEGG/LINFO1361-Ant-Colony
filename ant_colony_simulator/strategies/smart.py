@@ -213,7 +213,7 @@ class SmartStrategy(AntStrategy):
             if self.target_frontier[ant_id] is None and self.frontiers[ant_id]:
                 sample = random.sample(list(self.frontiers[ant_id]), min(20, len(self.frontiers[ant_id])))
                 # Choisir ICI les paramètre d'exploration
-                if random.random() < 0.5:
+                if random.random() < 0.8:
                     self.target_frontier[ant_id] = max(sample, key=lambda f: f[0] ** 2 + f[1] ** 2)
                     #self.target_frontier[ant_id] = min(sample, key=lambda f: (f[0] - x)**2 + (f[1] - y)**2)
                 else:
@@ -224,7 +224,7 @@ class SmartStrategy(AntStrategy):
 
 
         # Navigation
-        if self.target_food[ant_id] is None:
+        if target_x is None and target_y is None:
             front_dx, front_dy = Direction.get_delta(perception.direction)
             front_x, front_y = x + front_dx, y + front_dy
             if (front_dx, front_dy) in perception.visible_cells and perception.visible_cells.get((front_dx, front_dy)) != TerrainType.WALL:
@@ -240,6 +240,8 @@ class SmartStrategy(AntStrategy):
             if action == AntAction.MOVE_FORWARD:
                 next_x, next_y = Direction.get_delta(perception.direction)
                 if (next_x, next_y) not in perception.visible_cells or perception.visible_cells.get((next_x, next_y)) == TerrainType.WALL:
+                    self.target_frontier[ant_id] = None
+                    self.target_food[ant_id] = None
                     action = random.choice([AntAction.TURN_RIGHT, AntAction.TURN_LEFT])
         else:
             action = AntAction.MOVE_FORWARD

@@ -467,7 +467,7 @@ def main():
     parser.add_argument(
         "--env",
         type=str,
-        default="envs/06_river_crossing.txt",
+        default="envs/04_obstacle_env.txt",
         help="Environment type (simple, obstacle, maze) or path to environment file (e.g., simple_env.txt)",
     )
     parser.add_argument(
